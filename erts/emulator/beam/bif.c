@@ -1827,7 +1827,7 @@ do_send(Process *p, Eterm to, Eterm msg, int suspend) {
 }
 
 Sint
-do_send_reliable(Process *p, Eterm to, Eterm msg, int suspend, int reliable) {{
+do_send_reliable(Process *p, Eterm to, Eterm msg, int suspend, int reliable) {
     Eterm portid;
     Port *pt;
     Process* rp;

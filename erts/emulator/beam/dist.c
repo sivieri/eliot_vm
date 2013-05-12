@@ -764,7 +764,8 @@ erts_dsig_send_msg_reliable(ErtsDSigData *dsdp, Eterm remote, Eterm message, int
 #endif
 
     UseTmpHeapNoproc(5);
-    if (SEQ_TRACE_TOKEN(sender) != NIL#ifdef USE_VM_PROBES
+    if (SEQ_TRACE_TOKEN(sender) != NIL
+#ifdef USE_VM_PROBES
     && SEQ_TRACE_TOKEN(sender) != am_have_dt_utag 
 #endif
     ) {
@@ -860,7 +861,7 @@ erts_dsig_send_reg_msg_reliable(ErtsDSigData *dsdp, Eterm remote_name, Eterm mes
     DTRACE6(message_send, sender_name, receiver_name,
             msize, tok_label, tok_lastcnt, tok_serial);
     DTRACE7(message_send_remote, sender_name, node_name, receiver_name,
-            msize, tok_label, tok_lastcnt, tok_serial)
+            msize, tok_label, tok_lastcnt, tok_serial);
     res = dsig_send_reliable(dsdp, ctl, message, 0, reliable);
     UnUseTmpHeapNoproc(6);
     return res;
