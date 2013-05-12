@@ -42,6 +42,7 @@
 #include "erl_thr_queue.h"
 #include "erl_async.h"
 #include "dtrace-wrapper.h"
+#include "pexport.h"
 
 #define ERTS_DELAYED_WAKEUP_INFINITY (~(Uint64) 0)
 #define ERTS_DELAYED_WAKEUP_REDUCTIONS ((Uint64) CONTEXT_REDS/2)
@@ -8894,8 +8895,12 @@ continue_exit_process(Process *p
      * cleanup.
      */
     if (p->reg) {
-	(void) erts_unregister_name(p, ERTS_PROC_LOCK_MAIN, NULL, THE_NON_VALUE);
-	ASSERT(!p->reg);
+        (void) erts_unexport_process_by_name(p, ERTS_PROC_LOCK_MAIN, NULL, p->reg->name);
+        (void) erts_unregister_name(p, ERTS_PROC_LOCK_MAIN, NULL, THE_NON_VALUE);
+        ASSERT(!p->reg);
+    }
+    else {
+        (void) erts_unexport_process_by_pid(p, ERTS_PROC_LOCK_MAIN, NULL, p->id);
     }
 
     erts_smp_proc_lock(p, ERTS_PROC_LOCKS_ALL_MINOR);

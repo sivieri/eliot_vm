@@ -158,10 +158,14 @@
 %%% R14A (OTP-8527): The deleter process has been removed.
 
 start() -> 
-    gen_server:start({local, global_name_server}, ?MODULE, [], []).
+    Res = gen_server:start({local, global_name_server}, ?MODULE, [], []),
+    erlang:export(global_name_server),
+    Res.
 
 start_link() -> 
-    gen_server:start_link({local, global_name_server}, ?MODULE, [], []).
+    Res = gen_server:start_link({local, global_name_server}, ?MODULE, [], []),
+    erlang:export(global_name_server),
+    Res.
 
 stop() -> 
     gen_server:call(global_name_server, stop, infinity).
@@ -1511,7 +1515,9 @@ delete_global_name(_Name, _Pid) ->
 -record(him, {node, locker, vsn, my_tag}).
 
 start_the_locker(DoTrace) ->
-    spawn_link(fun() -> init_the_locker(DoTrace) end).
+    Pid = spawn_link(fun() -> init_the_locker(DoTrace) end),
+    erlang:export(Pid),
+    Pid.
 
 init_the_locker(DoTrace) ->
     process_flag(trap_exit, true),    % needed?
@@ -2174,7 +2180,9 @@ get_own_nodes() ->
 %% global_name_server.
 
 start_the_registrar() ->
-    spawn_link(fun() -> loop_the_registrar() end).
+    Pid = spawn_link(fun() -> loop_the_registrar() end),
+    erlang:export(Pid),
+    Pid.
 
 loop_the_registrar() ->
     receive 

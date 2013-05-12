@@ -766,6 +766,7 @@ void erts_queue_monitor_message(Process *,
 				Eterm);
 void erts_init_bif(void);
 Eterm erl_send(Process *p, Eterm to, Eterm msg);
+Eterm erl_send_reliable(Process *p, Eterm to, Eterm msg, int reliable);
 
 /* erl_bif_op.c */
 

@@ -272,9 +272,11 @@ erts_destroy_dist_link(ErtsDistLinkData *dldp)
 
 extern int erts_dsig_send_link(ErtsDSigData *, Eterm, Eterm);
 extern int erts_dsig_send_msg(ErtsDSigData *, Eterm, Eterm);
+extern int erts_dsig_send_msg_reliable(ErtsDSigData *, Eterm, Eterm, int);
 extern int erts_dsig_send_exit_tt(ErtsDSigData *, Eterm, Eterm, Eterm, Eterm);
 extern int erts_dsig_send_unlink(ErtsDSigData *, Eterm, Eterm);
 extern int erts_dsig_send_reg_msg(ErtsDSigData *, Eterm, Eterm);
+extern int erts_dsig_send_reg_msg_reliable(ErtsDSigData *, Eterm, Eterm, int);
 extern int erts_dsig_send_group_leader(ErtsDSigData *, Eterm, Eterm);
 extern int erts_dsig_send_exit(ErtsDSigData *, Eterm, Eterm, Eterm);
 extern int erts_dsig_send_exit2(ErtsDSigData *, Eterm, Eterm, Eterm);

@@ -134,8 +134,8 @@ init([]) ->
 			       [{local, kernel_safe_sup}, ?MODULE, safe]},
 			      permanent, infinity, supervisor, [?MODULE]},
 	    {ok, {SupFlags,
-		  [Rpc, Global, InetDb | DistAC] ++ 
-		  [NetSup, Glo_grp, File, Code, 
+		  [InetDb | DistAC] ++ 
+          [Global, NetSup, File, Code, 
 		   StdError, User, Config, SafeSupervisor] ++ Timer}}
     end;
 init(safe) ->

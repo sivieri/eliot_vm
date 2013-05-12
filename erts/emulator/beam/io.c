@@ -2997,6 +2997,8 @@ driver_deliver_term(ErlDrvPort port,
     struct b2t_states__ b2t;
 
     init_b2t_states(&b2t);
+    
+    //erts_fprintf(stderr, "DEBUG: To %T\n", to);
 
     /*
      * We used to check port and process here. In the SMP enabled emulator,
@@ -3526,6 +3528,7 @@ int driver_output2(ErlDrvPort ix, char* hbuf, ErlDrvSizeT hlen,
     prt->bytes_in += (hlen + len);
     erts_smp_atomic_add_nob(&erts_bytes_in, (erts_aint_t) (hlen + len));
     if (prt->status & ERTS_PORT_SFLG_DISTRIBUTION) {
+        erts_fprintf(stderr, "DEBUG: status %d and lengths %d - %d, on port connected to %T\n", prt->status & ERTS_PORT_SFLG_DISTRIBUTION, hlen, len, prt->connected);
 	if (len == 0)
 	    return erts_net_message(prt,
 				    prt->dist_entry,

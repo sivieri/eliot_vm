@@ -584,6 +584,8 @@ dispatch({'$gen_cast', Msg}, Mod, State) ->
 dispatch(Info, Mod, State) ->
     Mod:handle_info(Info, State).
 
+handle_msg({_, _, {'$gen_call', From, Msg}}, Parent, Name, State, Mod) ->
+    handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod);
 handle_msg({'$gen_call', From, Msg}, Parent, Name, State, Mod) ->
     case catch Mod:handle_call(Msg, From, State) of
 	{reply, Reply, NState} ->

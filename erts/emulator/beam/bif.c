@@ -36,6 +36,7 @@
 #include "beam_bp.h"
 #include "erl_db_util.h"
 #include "register.h"
+#include "pexport.h"
 #include "erl_thr_progress.h"
 
 static Export* flush_monitor_message_trap = NULL;
@@ -1741,7 +1742,17 @@ BIF_RETTYPE whereis_1(BIF_ALIST_1)
 BIF_RETTYPE
 ebif_bang_2(BIF_ALIST_2)
 {
-    return erl_send(BIF_P, BIF_ARG_1, BIF_ARG_2);
+    return erl_send_reliable(BIF_P, BIF_ARG_1, BIF_ARG_2, 1);
+}
+
+/*
+ * erlang:'~'/2
+ */
+
+BIF_RETTYPE
+ebif_tilde_2(BIF_ALIST_2)
+{
+    return erl_send_reliable(BIF_P, BIF_ARG_1, BIF_ARG_2, 0);
 }
 
 
@@ -1757,9 +1768,10 @@ ebif_bang_2(BIF_ALIST_2)
 #define SEND_INTERNAL_ERROR	(-6)
 
 Sint do_send(Process *p, Eterm to, Eterm msg, int suspend);
+Sint do_send_reliable(Process *p, Eterm to, Eterm msg, int suspend, int reliable);
 
-static Sint remote_send(Process *p, DistEntry *dep,
-			Eterm to, Eterm full_to, Eterm msg, int suspend)
+static Sint remote_send_reliable(Process *p, DistEntry *dep,
+            Eterm to, Eterm full_to, Eterm msg, int suspend, int reliable)
 {
     Sint res;
     int code;
@@ -1779,10 +1791,10 @@ static Sint remote_send(Process *p, DistEntry *dep,
 	break;
     case ERTS_DSIG_PREP_CONNECTED: {
 
-	if (is_atom(to))
-	    code = erts_dsig_send_reg_msg(&dsd, to, msg);
-	else
-	    code = erts_dsig_send_msg(&dsd, to, msg);
+    if (is_atom(to))
+        code = erts_dsig_send_reg_msg_reliable(&dsd, to, msg, reliable);
+    else
+        code = erts_dsig_send_msg_reliable(&dsd, to, msg, reliable);
 	/*
 	 * Note that reductions have been bumped on calling
 	 * process by erts_dsig_send_reg_msg() or
@@ -1811,6 +1823,11 @@ static Sint remote_send(Process *p, DistEntry *dep,
 
 Sint
 do_send(Process *p, Eterm to, Eterm msg, int suspend) {
+    return do_send_reliable(p, to, msg, suspend, 1);
+}
+
+Sint
+do_send_reliable(Process *p, Eterm to, Eterm msg, int suspend, int reliable) {{
     Eterm portid;
     Port *pt;
     Process* rp;
@@ -1848,47 +1865,63 @@ do_send(Process *p, Eterm to, Eterm msg, int suspend) {
 	    erts_send_error_to_logger(p->group_leader, dsbufp);
 	    return 0;
 	}
-	return remote_send(p, dep, to, to, msg, suspend);
+	return remote_send_reliable(p, dep, to, to, msg, suspend, reliable);
     } else if (is_atom(to)) {
-	
-	/* Need to virtual schedule out sending process
-	 * because of lock wait. This is only necessary
-	 * for internal port calling but the lock is bundled
-	 * with name lookup.
-	 */
-	    
-	if (IS_TRACED_FL(p, F_TRACE_SCHED_PROCS)) {
-	    trace_virtual_sched(p, am_out);
-	}
-	if (erts_system_profile_flags.runnable_procs && erts_system_profile_flags.exclusive) {
-	    profile_runnable_proc(p, am_inactive);
-	}
-	erts_whereis_name(p, ERTS_PROC_LOCK_MAIN,
-			  to,
-			  &rp, 0, ERTS_P2P_FLG_SMP_INC_REFC,
-			  &pt);
+        int ret;
+        
+        if (to != am_all) { /* Standard send invocation */
+        
+        /* Need to virtual schedule out sending process
+        * because of lock wait. This is only necessary
+        * for internal port calling but the lock is bundled
+        * with name lookup.
+        */
+            
+        if (IS_TRACED_FL(p, F_TRACE_SCHED_PROCS)) {
+            trace_virtual_sched(p, am_out);
+        }
+        if (erts_system_profile_flags.runnable_procs && erts_system_profile_flags.exclusive) {
+            profile_runnable_proc(p, am_inactive);
+        }
+        erts_whereis_name(p, ERTS_PROC_LOCK_MAIN,
+                to,
+                &rp, 0, ERTS_P2P_FLG_SMP_INC_REFC,
+                &pt);
 
-	if (pt) {
-	    portid = pt->id;
-	    goto port_common;
-	}
-	
-	/* Not a port virtually schedule the process back in */
-	if (IS_TRACED_FL(p, F_TRACE_SCHED_PROCS)) {
-	    trace_virtual_sched(p, am_in);
-	}
-	if (erts_system_profile_flags.runnable_procs && erts_system_profile_flags.exclusive) {
-	    profile_runnable_proc(p, am_active);
-	}
+        if (pt) {
+            portid = pt->id;
+            goto port_common;
+        }
+        
+        /* Not a port virtually schedule the process back in */
+        if (IS_TRACED_FL(p, F_TRACE_SCHED_PROCS)) {
+            trace_virtual_sched(p, am_in);
+        }
+        if (erts_system_profile_flags.runnable_procs && erts_system_profile_flags.exclusive) {
+            profile_runnable_proc(p, am_active);
+        }
 
-	if (IS_TRACED(p))
-	    trace_send(p, to, msg);
-	if (ERTS_PROC_GET_SAVED_CALLS_BUF(p))
-	    save_calls(p, &exp_send);
-	
-	if (!rp) {
-	    return SEND_BADARG;
-	}
+        if (IS_TRACED(p))
+            trace_send(p, to, msg);
+        if (ERTS_PROC_GET_SAVED_CALLS_BUF(p))
+            save_calls(p, &exp_send);
+        
+        if (!rp) {
+            return SEND_BADARG;
+        }
+    }
+    else {
+        /* Broadcast to all nodes {all, all}
+            * This transmission is always unreliable, regardless of
+            * the use of bang or tilde
+            */
+        ret = 0;
+        Eterm* hp = HAlloc(p, 3);
+        Eterm arg = TUPLE2(hp, am_all, am_all);
+        ret = erl_send_reliable(p, arg, msg, 0) || ret;
+        
+        return ret;
+    }
     } else if (is_external_port(to)
 	       && (external_port_dist_entry(to)
 		   == erts_this_dist_entry)) {
@@ -1989,6 +2022,13 @@ do_send(Process *p, Eterm to, Eterm msg, int suspend) {
 	    return SEND_BADARG;
 	if (is_not_atom(tp[1]) || is_not_atom(tp[2]))
 	    return SEND_BADARG;
+    /* Sending to all is handled by the 'all' port, so no distinction here
+     * between unicast and broadcast, except for the fact that a broadcast
+     * communication is always unreliable
+     */  
+    if (tp[2] == am_all) {
+        reliable = 0;
+    }
 	
 	/* sysname_to_connected_dist_entry will return NULL if there
 	   is no dist_entry or the dist_entry has no port,
@@ -2040,7 +2080,7 @@ do_send(Process *p, Eterm to, Eterm msg, int suspend) {
 	    goto send_message;
 	}
 
-	ret = remote_send(p, dep, tp[1], to, msg, suspend);
+	ret = remote_send_reliable(p, dep, tp[1], to, msg, suspend, reliable);
 	if (dep)
 	    erts_deref_dist_entry(dep);
 	return ret;
@@ -2159,7 +2199,12 @@ BIF_RETTYPE send_2(BIF_ALIST_2)
 
 Eterm erl_send(Process *p, Eterm to, Eterm msg)
 {
-    Sint result = do_send(p, to, msg, !0);
+    return erl_send_reliable(p, to, msg, 1);
+}
+
+Eterm erl_send_reliable(Process *p, Eterm to, Eterm msg, int reliable)
+{
+    Sint result = do_send_reliable(p, to, msg, !0, reliable);
     
     if (result > 0) {
 	ERTS_VBUMP_REDS(p, result);
@@ -4819,4 +4864,51 @@ BIF_RETTYPE dt_restore_tag_1(BIF_ALIST_1)
     BIF_RET(am_true);
 }
 
+/* export(atom|Process) exports a process
+   (for this node) */
+
+BIF_RETTYPE export_1(BIF_ALIST_1)   /* (Atom|Pid)   */
+{
+    int res;
+    
+    if (is_atom(BIF_ARG_1))
+    {
+        erts_printf("DEBUG: Exporting atom %T\n", BIF_ARG_1);
+        res = erts_export_process_by_name(BIF_P, BIF_ARG_1);
+    }
+    else
+    {
+        erts_printf("DEBUG: Exporting pid %T\n", BIF_ARG_1);
+        res = erts_export_process_by_pid(BIF_P, BIF_ARG_1);
+    }
+    if (res)
+        BIF_RET(am_true);
+    else {
+        BIF_ERROR(BIF_P, BADARG);
+    }
+}
+
+
+/**********************************************************************/
+
+/* removes the export of a process */
+
+BIF_RETTYPE unexport_1(BIF_ALIST_1)
+{
+    int res;
+    
+    erts_printf("DEBUG: Unexporting %T\n", BIF_ARG_1);
+    if (is_atom(BIF_ARG_1)) {
+        res = erts_unexport_process_by_name(BIF_P, ERTS_PROC_LOCK_MAIN, NULL, BIF_ARG_1);
+    }
+    else {
+        res = erts_unexport_process_by_pid(BIF_P, ERTS_PROC_LOCK_MAIN, NULL, BIF_ARG_1);
+    }
+    if (res == 0) {
+        BIF_ERROR(BIF_P, BADARG);
+    }
+    BIF_RET(am_true);
+}
+
+/**********************************************************************/
 

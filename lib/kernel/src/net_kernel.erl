@@ -342,6 +342,7 @@ start_link([Name, LongOrShortNames, Ticktime]) ->
     case gen_server:start_link({local, net_kernel}, net_kernel,
 			       {Name, LongOrShortNames, Ticktime}, []) of
 	{ok, Pid} ->
+        erlang:export(net_kernel),
 	    {ok, Pid};
 	{error, {already_started, Pid}} ->
 	    {ok, Pid};
@@ -427,6 +428,34 @@ handle_call({disconnect, Node}, From, State) ->
 %%
 handle_call({spawn,M,F,A,Gleader},{From,Tag},State) when is_pid(From) ->
     do_spawn([no_link,{From,Tag},M,F,A,Gleader],[],State);
+
+%%
+%% The spawn/4 BIF plus node ends up here.
+%%
+handle_call({spawn,M,F,A,Gleader,N},{From,Tag},State) when is_pid(From) ->
+    do_spawn([no_link,{From,Tag},M,F,A,Gleader,N],[],State);
+
+%%
+%% The spawn_cond/5 BIF ends up here.
+%%
+handle_call({spawn_cond,M,F,A,C,Gleader},{From,Tag},State) when is_pid(From) ->
+    case C() of
+        true ->
+            do_spawn([no_link,{From,Tag},M,F,A,Gleader],[],State);
+        false ->
+            ok
+    end;
+
+%%
+%% The spawn_cond/5 BIF plus node ends up here.
+%%
+handle_call({spawn_cond,M,F,A,C,Gleader,N},{From,Tag},State) when is_pid(From) ->
+    case C() of
+        true ->
+            do_spawn([no_link,{From,Tag},M,F,A,Gleader,N],[],State);
+        false ->
+            ok
+    end;
 
 %%
 %% The spawn_link/4 BIF ends up here.

@@ -177,7 +177,7 @@ int erts_register_name(Process *c_p, Eterm name, Eterm id)
     RegProc r, *rp;
     ERTS_SMP_CHK_HAVE_ONLY_MAIN_PROC_LOCK(c_p);
 
-    if (is_not_atom(name) || name == am_undefined)
+    if (is_not_atom(name) || name == am_undefined || name == am_all)
 	return res;
 
     if (c_p->id == id) /* A very common case I think... */

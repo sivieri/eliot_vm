@@ -217,21 +217,33 @@ do_call(Process, Label, Request, Timeout) ->
 
 	    catch erlang:send(Process, {Label, {self(), Mref}, Request},
 		  [noconnect]),
-	    receive
-		{Mref, Reply} ->
-		    erlang:demonitor(Mref, [flush]),
-		    {ok, Reply};
-		{'DOWN', Mref, _, _, noconnection} ->
-		    exit({nodedown, Node});
-		{'DOWN', Mref, _, _, Reason} ->
-		    exit(Reason)
-	    after Timeout ->
-		    erlang:demonitor(Mref),
-		    receive
-			{'DOWN', Mref, _, _, _} -> true
-		    after 0 -> true
-		    end,
-		    exit(timeout)
+	    case Node of
+            all ->
+                {ok, ok};
+            _ ->
+                receive
+                {_, _, {Mref, Reply}} ->
+                    erlang:demonitor(Mref, [flush]),
+                    {ok, Reply};
+                {Mref, Reply} ->
+                    erlang:demonitor(Mref, [flush]),
+                    {ok, Reply};
+                {_, _, {'DOWN', Mref, _, _, noconnection}} ->
+                    exit({nodedown, Node});
+                {'DOWN', Mref, _, _, noconnection} ->
+                    exit({nodedown, Node});
+                {_, _, {'DOWN', Mref, _, _, Reason}} ->
+                    exit(Reason);
+                {'DOWN', Mref, _, _, Reason} ->
+                    exit(Reason)
+                after Timeout ->
+                    erlang:demonitor(Mref),
+                    receive
+                    {'DOWN', Mref, _, _, _} -> true
+                    after 0 -> true
+                    end,
+                    exit(timeout)
+                end
 	    end
     catch
 	error:_ ->

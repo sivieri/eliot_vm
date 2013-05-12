@@ -834,3 +834,19 @@ bif erlang:dt_append_vm_tag_data/1
 #
 
 bif erlang:hash/2
+
+# New in ELIoT
+bif erlang:export/1
+bif 'erl.lang.node':export/1      ebif_export_1
+bif erlang:exported/0
+bif 'erl.lang.node':exported/0    ebif_exported_0
+bif erlang:unexport/1
+bif 'erl.lang.node':unexport/1    ebif_unexport_1
+bif erlang:'~'/2        ebif_tilde_2
+
+# Clocks
+bif unixtime:clock/0
+bif unixtime:gettimeofday/0
+bif unixtime:clock_gettime/0
+bif unixtime:times/0
+bif unixtime:getrusage/0

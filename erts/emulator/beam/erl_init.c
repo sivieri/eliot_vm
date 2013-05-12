@@ -246,6 +246,7 @@ erl_init(int ncpu)
     init_export_table();
     init_module_table();
     init_register_table();
+    init_pexport_table();
     init_message();
     erts_bif_info_init();
     erts_ddll_init();

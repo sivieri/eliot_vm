@@ -158,6 +158,7 @@ byte *erts_encode_ext_dist_header_setup(byte *, ErtsAtomCacheMap *);
 byte *erts_encode_ext_dist_header_finalize(byte *, ErtsAtomCache *);
 Uint erts_encode_dist_ext_size(Eterm, Uint32, ErtsAtomCacheMap *);
 void erts_encode_dist_ext(Eterm, byte **, Uint32, ErtsAtomCacheMap *);
+void erts_encode_dist_reliability(byte **, int);
 
 Uint erts_encode_ext_size(Eterm);
 Uint erts_encode_ext_size_2(Eterm, unsigned);

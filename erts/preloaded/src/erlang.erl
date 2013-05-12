@@ -23,6 +23,7 @@
 	 spawn_opt/2,spawn_opt/3,spawn_opt/4,spawn_opt/5,
 	 disconnect_node/1]).
 -export([spawn/1, spawn_link/1, spawn/2, spawn_link/2]).
+-export([spawn_cond/3, spawn_cond/5]).
 -export([yield/0]).
 -export([crasher/6]).
 -export([fun_info/1]).
@@ -89,7 +90,7 @@ spawn({M,F}=MF) when is_atom(M), is_atom(F) ->
 spawn(F) ->
     erlang:error(badarg, [F]).
 
--spec spawn(Node, Fun) -> pid() when
+-spec spawn(Node, Fun) -> pid() | ok when
       Node :: node(),
       Fun :: function().
 spawn(N, F) when N =:= node() ->
@@ -100,6 +101,23 @@ spawn(N, {M,F}=MF) when is_atom(M), is_atom(F) ->
     spawn(N, erlang, apply, [MF, []]);
 spawn(N, F) ->
     erlang:error(badarg, [N, F]).
+
+%% ELIoT
+
+-spec spawn_cond(Node, Fun, Cond) -> pid() | ok when
+      Node :: node(),
+      Fun :: function(),
+      Cond :: function().
+spawn_cond(N, F, C) when N =:= node() ->
+    spawn(F);
+spawn_cond(N, F, C) when is_function(F), is_function(C) ->
+    spawn_cond(N, erlang, apply, [F, []], C);
+spawn_cond(N, {M,F}=MF, C) when is_atom(M), is_atom(F), is_function(C) ->
+    spawn_cond(N, erlang, apply, [MF, []], C);
+spawn_cond(N, F, C) ->
+    erlang:error(badarg, [N, F, C]).
+
+%% End ELIoT
 
 -spec spawn_link(Fun) -> pid() when
       Fun :: function().
@@ -177,7 +195,7 @@ spawn_opt(N, F, O) ->
 
 %% Spawns with MFA
 
--spec spawn(Node, Module, Function, Args) -> pid() when
+-spec spawn(Node, Module, Function, Args) -> pid() | ok when
       Node :: node(),
       Module :: module(),
       Function :: atom(),
@@ -192,10 +210,12 @@ spawn(N,M,F,A) when is_atom(N), is_atom(M), is_atom(F) ->
 	    erlang:error(badarg, [N, M, F, A])
     end,
     case catch gen_server:call({net_kernel,N},
-			       {spawn,M,F,A,group_leader()},
+                   {spawn,M,F,A,group_leader(),N},
 			       infinity) of
 	Pid when is_pid(Pid) ->
 	    Pid;
+	ok when N == all ->
+        ok;
 	Error ->
 	    case remote_spawn_error(Error, {no_link, N, M, F, A, []}) of
 		{fault, Fault} ->
@@ -206,6 +226,43 @@ spawn(N,M,F,A) when is_atom(N), is_atom(M), is_atom(F) ->
     end;
 spawn(N,M,F,A) ->
     erlang:error(badarg, [N, M, F, A]).
+
+%% ELIoT
+
+-spec spawn_cond(Node, Module, Function, Args, Cond) -> pid() | ok when
+      Node :: node(),
+      Module :: module(),
+      Function :: atom(),
+      Args :: [term()],
+      Cond :: function().
+spawn_cond(N,M,F,A,C) when N =:= node(), is_atom(M), is_atom(F), is_list(A), is_function(C) ->
+    spawn(M,F,A);
+spawn_cond(N,M,F,A, C) when is_atom(N), is_atom(M), is_atom(F), is_function(C) ->
+    case is_well_formed_list(A) of
+    true ->
+        ok;
+    false ->
+        erlang:error(badarg, [N, M, F, A])
+    end,
+    case catch gen_server:call({net_kernel,N},
+                   {spawn_cond,M,F,A,C,group_leader(),N},
+                   infinity) of
+    Pid when is_pid(Pid) ->
+        Pid;
+    ok when N == all ->
+        ok;
+    Error ->
+        case remote_spawn_error(Error, {no_link, N, M, F, A, C, []}) of
+        {fault, Fault} ->
+            erlang:error(Fault, [N, M, F, A, C]);
+        Pid ->
+            Pid
+        end
+    end;
+spawn_cond(N,M,F,A,C) ->
+    erlang:error(badarg, [N, M, F, A, C]).
+
+%% End ELIoT
 
 -spec spawn_link(Node, Module, Function, Args) -> pid() when
       Node :: node(),

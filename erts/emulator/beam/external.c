@@ -486,6 +486,14 @@ void erts_encode_dist_ext(Eterm term, byte **ext, Uint32 flags, ErtsAtomCacheMap
     *ext = ep;
 }
 
+void erts_encode_dist_reliability(byte **ext, int reliable)
+{
+    byte *ep = *ext;
+    if (reliable) *ep++ = 1;
+    else *ep++ = 0;
+    *ext = ep;
+}
+
 void erts_encode_ext(Eterm term, byte **ext)
 {
     byte *ep = *ext;
@@ -565,8 +573,9 @@ erts_prepare_dist_ext(ErtsDistExternal *edep,
 	if (dep)
 	    erts_dsprintf(dsbufp,
 			  "** Got message from incompatible erlang on "
-			  "channel %d\n",
-			  dist_entry_channel_no(dep));
+			  "channel %d: version %d\n",
+			  dist_entry_channel_no(dep),
+              (unsigned short) ep[0]);
 	else
 	    erts_dsprintf(dsbufp,
 			  "** Attempt to convert old incompatible "
@@ -588,8 +597,10 @@ erts_prepare_dist_ext(ErtsDistExternal *edep,
     }
 
     if (ep[1] != DIST_HEADER) {
-	if (edep->flags & ERTS_DIST_EXT_DFLAG_HDR)
-	    ERTS_EXT_HDR_FAIL;
+	if (edep->flags & ERTS_DIST_EXT_DFLAG_HDR) {
+        erts_fprintf(stderr, "1\n");
+        ERTS_EXT_HDR_FAIL;
+    }
 	edep->attab.size = 0;
 	edep->extp = ext;
     }
@@ -597,8 +608,10 @@ erts_prepare_dist_ext(ErtsDistExternal *edep,
 	int tix;
 	int no_atoms;
 
-	if (!(edep->flags & ERTS_DIST_EXT_DFLAG_HDR))
-	    ERTS_EXT_HDR_FAIL;
+	if (!(edep->flags & ERTS_DIST_EXT_DFLAG_HDR)) {
+        erts_fprintf(stderr, "2\n");
+        ERTS_EXT_HDR_FAIL;
+    }
 
 #undef CHKSIZE
 #define CHKSIZE(SZ) \
@@ -607,8 +620,10 @@ erts_prepare_dist_ext(ErtsDistExternal *edep,
 	CHKSIZE(1+1+1);
 	ep += 2;
 	no_atoms = (int) get_int8(ep);
-	if (no_atoms < 0 || ERTS_ATOM_CACHE_SIZE < no_atoms)
-	    ERTS_EXT_HDR_FAIL;
+	if (no_atoms < 0 || ERTS_ATOM_CACHE_SIZE < no_atoms) {
+        erts_fprintf(stderr, "3\n");
+        ERTS_EXT_HDR_FAIL;
+    }
 	ep++;
 	if (no_atoms) {
 #if MAX_ATOM_LENGTH > 255
@@ -697,8 +712,10 @@ erts_prepare_dist_ext(ErtsDistExternal *edep,
 			ERTS_EXT_HDR_FAIL;
 		    ep++;
 		    atom = cache->in_arr[cix];
-		    if (!is_atom(atom))
-			ERTS_EXT_HDR_FAIL;
+		    if (!is_atom(atom)) {
+                erts_fprintf(stderr, "4\n");
+                ERTS_EXT_HDR_FAIL;
+            }
 		    edep->attab.atom[tix] = atom;
 		}
 		else {

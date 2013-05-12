@@ -100,6 +100,7 @@ publish_flag(_, OtherNode) ->
 	    0
     end.
 
+%% No atom cache for all: when broadcasting the cache cannot be synchronized!
 make_this_flags(RequestType, OtherNode) ->
     publish_flag(RequestType, OtherNode) bor
 	%% The parenthesis below makes the compiler generate better code.
@@ -114,30 +115,20 @@ make_this_flags(RequestType, OtherNode) ->
 	 ?DFLAG_BIT_BINARIES bor
 	 ?DFLAG_NEW_FLOATS bor
 	 ?DFLAG_UNICODE_IO bor
-	 ?DFLAG_DIST_HDR_ATOM_CACHE bor
+	 %?DFLAG_DIST_HDR_ATOM_CACHE bor
 	 ?DFLAG_SMALL_ATOM_TAGS).
 
-handshake_other_started(#hs_data{request_type=ReqType}=HSData0) ->
-    {PreOtherFlags,Node,Version} = recv_name(HSData0),
+handshake_other_started(#hs_data{request_type=ReqType,other_node=Node}=HSData0) ->
     PreThisFlags = make_this_flags(ReqType, Node),
+    PreOtherFlags = make_this_flags(ReqType, node()),
     {ThisFlags, OtherFlags} = adjust_flags(PreThisFlags,
 					   PreOtherFlags),
     HSData = HSData0#hs_data{this_flags=ThisFlags,
 			     other_flags=OtherFlags,
-			     other_version=Version,
-			     other_node=Node,
 			     other_started=true},
     check_dflag_xnc(HSData),
     is_allowed(HSData),
-    ?debug({"MD5 connection from ~p (V~p)~n",
-	    [Node, HSData#hs_data.other_version]}),
     mark_pending(HSData),
-    {MyCookie,HisCookie} = get_cookies(Node),
-    ChallengeA = gen_challenge(),
-    send_challenge(HSData, ChallengeA),
-    reset_timer(HSData#hs_data.timer),
-    ChallengeB = recv_challenge_reply(HSData, ChallengeA, MyCookie),
-    send_challenge_ack(HSData, gen_digest(ChallengeB, HisCookie)),
     ?debug({dist_util, self(), accept_connection, Node}),
     connection(HSData).
 
@@ -149,7 +140,6 @@ is_allowed(#hs_data{other_node = Node,
 		    allowed = Allowed} = HSData) ->
     case lists:member(Node, Allowed) of
 	false when Allowed =/= [] ->
-	    send_status(HSData, not_allowed),
 	    error_msg("** Connection attempt from "
 		      "disallowed node ~w ** ~n", [Node]),
 	    ?shutdown(Node);
@@ -183,7 +173,6 @@ check_dflag_xnc(#hs_data{other_node = Node,
 		   end,
 	    case OtherStarted of
 		true ->
-		    send_status(HSData, not_allowed),
 		    Dir = "from",
 		    How = "rejected";
 	        _ ->
@@ -208,23 +197,15 @@ mark_pending(#hs_data{kernel_pid=Kernel,
 						    Node),
 			 HSData#hs_data.other_flags) of
 	ok ->
-	    send_status(HSData, ok),
 	    reset_timer(HSData#hs_data.timer);
 
 	ok_pending ->
-	    send_status(HSData, ok_simultaneous),
 	    reset_timer(HSData#hs_data.timer);
 
 	nok_pending ->
-	    send_status(HSData, nok),
 	    ?shutdown(Node);
 	    
 	up_pending ->
-	    %% Check if connection is still alive, no
-	    %% implies that the connection is no longer pending
-	    %% due to simultaneous connect
-	    do_alive(HSData),
-
 	    %% This can happen if the other node goes down,
 	    %% and goes up again and contact us before we have
 	    %% detected that the socket was closed. 
@@ -311,21 +292,13 @@ flush_down() ->
 handshake_we_started(#hs_data{request_type=ReqType,
 			      other_node=Node}=PreHSData) ->
     PreThisFlags = make_this_flags(ReqType, Node),
+    PreOtherFlags = make_this_flags(ReqType, node()),
     HSData = PreHSData#hs_data{this_flags=PreThisFlags},
-    send_name(HSData),
-    recv_status(HSData),
-    {PreOtherFlags,ChallengeA} = recv_challenge(HSData),
     {ThisFlags,OtherFlags} = adjust_flags(PreThisFlags, PreOtherFlags),
     NewHSData = HSData#hs_data{this_flags = ThisFlags,
 			       other_flags = OtherFlags, 
 			       other_started = false}, 
     check_dflag_xnc(NewHSData),
-    MyChallenge = gen_challenge(),
-    {MyCookie,HisCookie} = get_cookies(Node),
-    send_challenge_reply(NewHSData,MyChallenge,
-			 gen_digest(ChallengeA,HisCookie)),
-    reset_timer(NewHSData#hs_data.timer),
-    recv_challenge_ack(NewHSData, MyChallenge, MyCookie),
     connection(NewHSData).
 
 %% --------------------------------------------------------------
@@ -343,9 +316,12 @@ connection(#hs_data{other_node = Node,
 	ok -> 
 	    do_setnode(HSData), % Succeeds or exits the process.
 	    Address = FAddress(Socket,Node),
+	    ?trace("DEBUG: Got address~n", []),
 	    mark_nodeup(HSData,Address),
+	    ?trace("DEBUG: Node marked as up~n", []),
 	    case FPostNodeup(Socket) of
 		ok ->
+            ?trace("DEBUG: Node postup~n", []),
 		    con_loop(HSData#hs_data.kernel_pid, 
 			     Node, 
 			     Socket, 
@@ -414,8 +390,11 @@ do_setnode(#hs_data{other_node = Node, socket = Socket,
 			      [Node]),
 		    ?shutdown(Node);
 		{'EXIT', Other} ->
+            ?trace("DEBUG: Nodes ~p~n", [nodes()]),
+            ?trace("DEBUG: Error ~p~n", [Other]),
 		    exit(Other);
 		_Else ->
+            ?trace("DEBUG: Ok~n", []),
 		    ok
 	    end;
 	_ ->
@@ -452,10 +431,13 @@ con_loop(Kernel, Node, Socket, TcpAddress,
 	 MyNode, Type, Tick, MFTick, MFGetstat) ->
     receive
 	{tcp_closed, Socket} ->
+        ?trace("DEBUG: Tcp closed~n", []),
 	    ?shutdown2(Node, connection_closed);
 	{Kernel, disconnect} ->
+        ?trace("DEBUG: Kernel disconnect~n", []),
 	    ?shutdown2(Node, disconnected);
 	{Kernel, aux_tick} ->
+        ?trace("DEBUG: Kernel aux tick~n", []),
 	    case MFGetstat(Socket) of
 		{ok, _, _, PendWrite} ->
 		    send_tick(Socket, PendWrite, MFTick);
@@ -465,6 +447,7 @@ con_loop(Kernel, Node, Socket, TcpAddress,
 	    con_loop(Kernel, Node, Socket, TcpAddress, MyNode, Type,
 		     Tick, MFTick, MFGetstat);
 	{Kernel, tick} ->
+        ?trace("DEBUG: Kernel tick~n", []),
 	    case send_tick(Socket, Tick, Type, 
 			   MFTick, MFGetstat) of
 		{ok, NewTick} ->
@@ -480,6 +463,7 @@ con_loop(Kernel, Node, Socket, TcpAddress,
 		    ?shutdown2(Node, send_net_tick_failed)
 	    end;
 	{From, get_status} ->
+        ?trace("DEBUG: Get status~n", []),
 	    case MFGetstat(Socket) of
 		{ok, Read, Write, _} ->
 		    From ! {self(), get_status, {ok, Read, Write}},
@@ -699,6 +683,7 @@ send_tick(Socket, Tick, Type, MFTick, MFGetstat) ->
 	  read = Read,
 	  write = Write,
 	  ticked = Ticked} = Tick,
+	io:format(standard_error, "TICK: ~p, ~p, ~p, ~p~n", [T0, Read, Write, Ticked]),
     T = T0 + 1,
     T1 = T rem 4,
     case MFGetstat(Socket) of

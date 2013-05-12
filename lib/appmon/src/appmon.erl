@@ -130,12 +130,13 @@ init([]) ->
 		lbpid=LbPid, mnodes=MNodes}}.
 
 check_node(Node) ->
-    case rpc:call(Node, code, which, [appmon]) of
-	File when is_list(File) ->
-	    true;
-	_ -> % non_existing (| cover_compiled)
-	    false
-    end.
+    false.
+%    case rpc:call(Node, code, which, [appmon]) of
+%   File when is_list(File) ->
+%       true;
+%   _ -> % non_existing (| cover_compiled)
+%       false
+%    end.
 
 %%----------------------------------------------------------------------
 %% Func: handle_call/3

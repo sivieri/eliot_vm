@@ -61,7 +61,7 @@ char integer float atom string var
 '++' '--'
 '==' '/=' '=<' '<' '>=' '>' '=:=' '=/=' '<='
 '<<' '>>'
-'!' '=' '::' '..' '...'
+'!' '~' '=' '::' '..' '...'
 'spec' 'callback' % helper
 dot.
 
@@ -221,6 +221,7 @@ expr -> expr_100 : '$1'.
 
 expr_100 -> expr_150 '=' expr_100 : {match,?line('$2'),'$1','$3'}.
 expr_100 -> expr_150 '!' expr_100 : ?mkop2('$1', '$2', '$3').
+expr_100 -> expr_150 '~' expr_100 : ?mkop2('$1', '$2', '$3').
 expr_100 -> expr_150 : '$1'.
 
 expr_150 -> expr_160 'orelse' expr_150 : ?mkop2('$1', '$2', '$3').
@@ -1034,6 +1035,7 @@ tokens_tuple([], Line, More) ->
 
 inop_prec('=') -> {150,100,100};
 inop_prec('!') -> {150,100,100};
+inop_prec('~') -> {150,100,100};
 inop_prec('orelse') -> {160,150,150};
 inop_prec('andalso') -> {200,160,160};
 inop_prec('==') -> {300,200,300};

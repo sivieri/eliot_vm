@@ -26,6 +26,7 @@
 -export([spawn/1, spawn_link/1, spawn/2, spawn_link/2,
          spawn/3, spawn_link/3, spawn/4, spawn_link/4,
          spawn_opt/2, spawn_opt/3, spawn_opt/4, spawn_opt/5,
+         spawn_cond/3, spawn_cond/5,
 	 start/3, start/4, start/5, start_link/3, start_link/4, start_link/5,
 	 hibernate/3,
 	 init_ack/1, init_ack/2,
@@ -88,7 +89,7 @@ spawn_link(M,F,A) when is_atom(M), is_atom(F), is_list(A) ->
     Ancestors = get_ancestors(),
     erlang:spawn_link(?MODULE, init_p, [Parent,Ancestors,M,F,A]).
 
--spec spawn(Node, Fun) -> pid() when
+-spec spawn(Node, Fun) -> pid() | ok when
       Node :: node(),
       Fun :: function().
 
@@ -97,7 +98,21 @@ spawn(Node, F) when is_function(F) ->
     Ancestors = get_ancestors(),
     erlang:spawn(Node, ?MODULE, init_p, [Parent,Ancestors,F]).
 
--spec spawn(Node, Module, Function, Args) -> pid() when
+%% ELIoT
+
+-spec spawn_cond(Node, Fun, Cond) -> pid() | ok when
+      Node :: node(),
+      Fun :: function(),
+      Cond :: function().
+
+spawn_cond(Node, F, C) when is_function(F), is_function(C) ->
+    Parent = get_my_name(),
+    Ancestors = get_ancestors(),
+    erlang:spawn_cond(Node, ?MODULE, init_p, [Parent,Ancestors,F,C]).
+
+%% End ELIoT
+
+-spec spawn(Node, Module, Function, Args) -> pid() | ok when
       Node :: node(),
       Module :: module(),
       Function :: atom(),
@@ -107,6 +122,22 @@ spawn(Node, M, F, A) when is_atom(M), is_atom(F), is_list(A) ->
     Parent = get_my_name(),
     Ancestors = get_ancestors(),
     erlang:spawn(Node, ?MODULE, init_p, [Parent,Ancestors,M,F,A]).
+
+%% ELIoT
+
+-spec spawn_cond(Node, Module, Function, Args, Cond) -> pid() | ok when
+      Node :: node(),
+      Module :: module(),
+      Function :: atom(),
+      Args :: [term()],
+      Cond :: function().
+
+spawn_cond(Node, M, F, A, C) when is_atom(M), is_atom(F), is_list(A), is_function(C) ->
+    Parent = get_my_name(),
+    Ancestors = get_ancestors(),
+    erlang:spawn_cond(Node, ?MODULE, init_p, [Parent,Ancestors,M,F,A,C]).
+
+%% End ELIoT
 
 -spec spawn_link(Node, Fun) -> pid() when
       Node :: node(),
