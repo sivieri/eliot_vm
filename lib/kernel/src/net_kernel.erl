@@ -1071,7 +1071,7 @@ ticker_loop(Kernel, Tick) ->
 	{new_ticktime, NewTick} ->
 	    ?tckr_dbg({ticker_changed_time, Tick, NewTick}),
 	    ?MODULE:ticker_loop(Kernel, NewTick)
-    after Tick ->
+    after infinity ->
 	    Kernel ! tick,
 	    ?MODULE:ticker_loop(Kernel, Tick)
     end.
@@ -1131,7 +1131,10 @@ safesend(Pid, Mess) -> Pid ! Mess.
 
 do_spawn(SpawnFuncArgs, SpawnOpts, State) ->
     [_,From|_] = SpawnFuncArgs,
-    case catch spawn_opt(?MODULE, spawn_func, SpawnFuncArgs, SpawnOpts) of
+    [N|T] = lists:reverse(SpawnFuncArgs),
+    case catch spawn_opt(?MODULE, spawn_func, lists:reverse(T), SpawnOpts) of
+    _ when N == all ->
+        {noreply, State};
 	{'EXIT', {Reason,_}} ->
             async_reply({reply, {'EXIT', {Reason,[]}}, State}, From);
 	{'EXIT', Reason} ->
