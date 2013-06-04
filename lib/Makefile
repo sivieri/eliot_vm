@@ -20,7 +20,7 @@ include $(ERL_TOP)/make/target.mk
 include $(ERL_TOP)/make/$(TARGET)/otp.mk
 
 ERTS_SUB_DIRECTORIES = stdlib sasl kernel compiler
-OTHER_SUB_DIRECTORIES = tools test_server common_test runtime_tools
+OTHER_SUB_DIRECTORIES = tools test_server common_test runtime_tools udp_dist
 ifdef BUILD_ALL
   OTHER_SUB_DIRECTORIES += \
           snmp otp_mibs appmon erl_interface asn1 jinterface \

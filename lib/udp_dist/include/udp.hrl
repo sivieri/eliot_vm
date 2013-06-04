@@ -1,0 +1,3 @@
+-define(NODENAME, "eliot").
+-define(INTERFACE, "eth0").
+-define(DRIVER_NAME,"eliot_udp").
