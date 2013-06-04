@@ -48,7 +48,7 @@ ERL_FILES = $(MODULES:%=%.erl)
 
 TARGET_FILES = $(MODULES:%=$(EBIN)/%.$(EMULATOR))
 
-HRL_FILE = ../include/udp.hrl
+HRL_DIR = ../include
 
 APP_FILE = udp_dist.app
 
@@ -61,7 +61,7 @@ APP_TARGET = $(EBIN)/$(APP_FILE)
 
 ERL_COMPILE_FLAGS += \
 	-I$(ERL_TOP)/lib/kernel/include \
-	-I$(HRL_FILE) \
+	-I$(HRL_DIR) \
 	+warn_unused_vars
 
 YRL_FLAGS = 
