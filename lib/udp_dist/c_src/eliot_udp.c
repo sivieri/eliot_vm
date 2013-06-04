@@ -106,7 +106,7 @@ static ErlDrvData drv_start(ErlDrvPort port, char* command);
 static void drv_stop(ErlDrvData handle);
 static void drv_ready_input(ErlDrvData handle, ErlDrvEvent event);
 static void drv_output(ErlDrvData handle, char* buf, ErlDrvSizeT len);
-static void drv_finish();
+static void drv_finish(void);
 static ErlDrvSSizeT drv_control(ErlDrvData handle, unsigned int cmd, char* buf, ErlDrvSizeT size, char** res,
         ErlDrvSizeT res_size);
 /*
@@ -120,11 +120,11 @@ void do_send_ack(int socket, uint16_t msg, struct sockaddr_in* client);
 void do_resend(ack_data_t* ack);
 void *do_beacon(void *data);
 int check_expired(unsigned long now, unsigned long last, int resend);
-void print_ports();
-void print_acks();
+void print_ports(void);
+void print_acks(void);
 void do_clean(driver_data_t *res);
-unsigned long get_current_time();
-unsigned long get_secs();
+unsigned long get_current_time(void);
+unsigned long get_secs(void);
 void do_send_upstairs(ack_data_t *ack, driver_data_t *res);
 static void put_packet_length(char *b, int len);
 static int report_control_error(char **buffer, int buff_len, 
@@ -275,7 +275,7 @@ static void drv_stop(ErlDrvData handle) {
     FPRINTF(stderr, "DEBUG: Driver instance cleared\n");
 }
 
-static void drv_finish() {
+static void drv_finish(void) {
     driver_data_t *iterator = head, *tmp;
     ip_data_t *iterator2 = peers, *tmp2;
     ack_data_t *iterator3 = acks, *tmp3;
@@ -710,7 +710,7 @@ void do_send_upstairs(ack_data_t *ack, driver_data_t *res) {
     FPRINTF(stderr, "DEBUG: Nack sent upstairs, to %lu, with result %d\n", ack->caller, result);
 }
 
-void print_ports() {
+void print_ports(void) {
     driver_data_t *iterator = head;
     while (iterator != NULL) {
         FPRINTF(stderr, "PORT: connected to %d, status %d\n", iterator->peer.sin_addr.s_addr, iterator->curstate);
@@ -718,7 +718,7 @@ void print_ports() {
     }
 }
 
-void print_acks() {
+void print_acks(void) {
     ack_data_t *iterator = acks;
     while (iterator != NULL) {
         FPRINTF(stderr, "ACK: message %d waiting since %d turns\n", iterator->msg, iterator->resend);
@@ -760,7 +760,7 @@ void free_entry(driver_data_t* element) {
     driver_free(element);
 }
 
-unsigned long get_current_time() {
+unsigned long get_current_time(void) {
     unsigned long res;
     ErlDrvNowData *now = driver_alloc(sizeof(ErlDrvNowData));
     driver_get_now(now);
@@ -771,7 +771,7 @@ unsigned long get_current_time() {
     return res;
 }
 
-unsigned long get_secs() {
+unsigned long get_secs(void) {
     unsigned long res;
     ErlDrvNowData *now = driver_alloc(sizeof(ErlDrvNowData));
     driver_get_now(now);
