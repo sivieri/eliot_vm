@@ -48,7 +48,7 @@ ERL_FILES = $(MODULES:%=%.erl)
 
 TARGET_FILES = $(MODULES:%=$(EBIN)/%.$(EMULATOR))
 
-HRL_FILES = udp.hrl
+HRL_FILE = ../include/udp.hrl
 
 APP_FILE = udp_dist.app
 
@@ -60,7 +60,8 @@ APP_TARGET = $(EBIN)/$(APP_FILE)
 # ----------------------------------------------------
 
 ERL_COMPILE_FLAGS += \
-	-I$(ERL_TOP)/lib/kernel \
+	-I$(ERL_TOP)/lib/kernel/include \
+	-I$(HRL_FILE)
 	+warn_unused_vars
 
 YRL_FLAGS = 
@@ -93,9 +94,9 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
 	$(INSTALL_DIR) "$(RELSYSDIR)/ebin"
-	$(INSTALL_DATA) $(TARGET_FILES) $(APP_TARGET) $(APPUP_TARGET) "$(RELSYSDIR)/ebin"
+	$(INSTALL_DATA) $(TARGET_FILES) $(APP_TARGET) "$(RELSYSDIR)/ebin"
 	$(INSTALL_DIR) "$(RELSYSDIR)/src"
-	$(INSTALL_DATA)  $(ERL_FILES) $(HRL_FILES) $(APP_SRC) $(APPUP_SRC) "$(RELSYSDIR)/src"
+	$(INSTALL_DATA)  $(ERL_FILES) $(HRL_FILES) $(APP_SRC) "$(RELSYSDIR)/src"
 
 # there are no include files to be used by the user
 #$(INSTALL_DIR) "$(RELSYSDIR)/include"
