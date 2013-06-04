@@ -89,7 +89,7 @@ include $(ERL_TOP)/make/otp_release_targets.mk
 
 release_spec: opt
 	$(INSTALL_DIR) "$(RELSYSDIR)/priv/lib"
-	$(INSTALL_PROGRAM) $(NIF_SHARED_OBJ_FILE) "$(RELSYSDIR)/priv/lib"
+	$(INSTALL_PROGRAM) $(SHARED_OBJ_FILE) "$(RELSYSDIR)/priv/lib"
 	$(INSTALL_DIR) "$(RELSYSDIR)/c_src"
 	$(INSTALL_DATA) *.c "$(RELSYSDIR)/c_src"
 
