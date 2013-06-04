@@ -61,7 +61,7 @@ APP_TARGET = $(EBIN)/$(APP_FILE)
 
 ERL_COMPILE_FLAGS += \
 	-I$(ERL_TOP)/lib/kernel/include \
-	-I$(HRL_FILE)
+	-I$(HRL_FILE) \
 	+warn_unused_vars
 
 YRL_FLAGS = 
