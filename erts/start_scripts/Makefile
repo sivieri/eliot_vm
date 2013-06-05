@@ -35,7 +35,8 @@ INSTALL_SCRIPTS = \
 	$(SS_ROOT)/start_clean.boot \
 	$(SS_ROOT)/start_sasl.boot \
 	$(SS_ROOT)/start_sasl.script \
-	$(SS_ROOT)/start_udp.script
+	$(SS_ROOT)/start_udp.script \
+	$(SS_ROOT)/start_udp.boot
 
 REL_SCRIPTS = \
 	$(SS_ROOT)/start_clean.rel \
