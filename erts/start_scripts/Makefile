@@ -90,7 +90,7 @@ $(SS_ROOT)/start_udp.script \
 $(SS_ROOT)/start_udp.boot:	$(SS_ROOT)/start_udp.rel
 	$(INSTALL_DIR) $(SS_TMP)
 	( cd $(SS_TMP) && \
-	$(ERLC) $(SASL_FLAGS) $(SCRIPT_PATH) -o $(SS_ROOT) $< )
+	$(ERLC) $(SASL_FLAGS) $(SCRIPT_PATH) +no_warn_sasl -o $(SS_ROOT) $< )
 
 $(SS_ROOT)/start_clean.rel: $(SS_ROOT)/start_clean.rel.src \
 			../vsn.mk \
@@ -118,13 +118,11 @@ $(SS_ROOT)/start_udp.rel:	$(SS_ROOT)/start_udp.rel.src \
 			../vsn.mk \
 			$(LIBPATH)/kernel/vsn.mk \
 			$(LIBPATH)/stdlib/vsn.mk \
-			$(LIBPATH)/sasl/vsn.mk \
 			$(LIBPATH)/udp_dist/vsn.mk
 	sed -e 's;%SYS_VSN%;$(SYSTEM_VSN);' \
             -e 's;%ERTS_VSN%;$(VSN);' \
             -e 's;%KERNEL_VSN%;$(KERNEL_VSN);' \
             -e 's;%STDLIB_VSN%;$(STDLIB_VSN);' \
-            -e 's;%SASL_VSN%;$(SASL_VSN);' \
             -e 's;%UDP_VSN%;$(UDP_VSN);' \
           $(SS_ROOT)/start_udp.rel.src > $(SS_ROOT)/start_udp.rel
 
@@ -162,7 +160,7 @@ $(ERL_TOP)/bin/start_sasl.script:
 $(ERL_TOP)/bin/start_udp.script:
 	$(INSTALL_DIR) $(SS_TMP)
 	( cd $(SS_TMP) && \
-	  $(ERLC) $(SCRIPT_PATH) +otp_build -o $@ $(SS_ROOT)/start_udp.rel )
+	  $(ERLC) $(SCRIPT_PATH) +no_warn_sasl +otp_build -o $@ $(SS_ROOT)/start_udp.rel )
 
 $(ERL_TOP)/bin/start_clean.script:
 	$(INSTALL_DIR) $(SS_TMP)
